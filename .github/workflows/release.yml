@@ -10,16 +10,18 @@ permissions:
 
 jobs:
   build:
+    # Both targets build on one Apple Silicon runner (macOS's Xcode toolchain
+    # cross-compiles x86_64-apple-darwin without needing an Intel runner) —
+    # avoids the macos-13 hosted-runner queue, which has been slow/congested.
     strategy:
       matrix:
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
         include:
           - target: aarch64-apple-darwin
-            runner: macos-14
             asset: sieg-macos-aarch64
           - target: x86_64-apple-darwin
-            runner: macos-13
             asset: sieg-macos-x86_64
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
