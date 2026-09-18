@@ -61,4 +61,6 @@ npx skills add daymer-perdomo/sieg --skill sieg -g
 See [`skills/sieg/SKILL.md`](skills/sieg/SKILL.md) for what it covers.
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for project history and the release
-process.
+process, or open [`docs/project-map.html`](docs/project-map.html) in a
+browser for a visual walkthrough of what's mock vs. real, the pane manager's
+architecture, the CLI, and the roadmap.

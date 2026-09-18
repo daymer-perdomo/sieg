@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sieg project map</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #11111b;
+    --panel: #1e1e2e;
+    --panel-alt: #181825;
+    --border: #313244;
+    --border-strong: #45475a;
+    --text: #cdd6f4;
+    --text-dim: #a6adc8;
+    --text-faint: #6c7086;
+    --accent: #89b4fa;
+    --accent-2: #cba6f7;
+    --good: #a6e3a1;
+    --warn: #f9e2af;
+    --bad: #f38ba8;
+    --info: #94e2d5;
+    --peach: #fab387;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eff1f5;
+      --panel: #ffffff;
+      --panel-alt: #e6e9ef;
+      --border: #ccd0da;
+      --border-strong: #bcc0cc;
+      --text: #4c4f69;
+      --text-dim: #6c6f85;
+      --text-faint: #9ca0b0;
+      --accent: #1e66f5;
+      --accent-2: #8839ef;
+      --good: #40a02b;
+      --warn: #df8e1d;
+      --bad: #d20f39;
+      --info: #179299;
+      --peach: #fe640b;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg: #eff1f5;
+    --panel: #ffffff;
+    --panel-alt: #e6e9ef;
+    --border: #ccd0da;
+    --border-strong: #bcc0cc;
+    --text: #4c4f69;
+    --text-dim: #6c6f85;
+    --text-faint: #9ca0b0;
+    --accent: #1e66f5;
+    --accent-2: #8839ef;
+    --good: #40a02b;
+    --warn: #df8e1d;
+    --bad: #d20f39;
+    --info: #179299;
+    --peach: #fe640b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    line-height: 1.25;
+    text-wrap: balance;
+    color: var(--text);
+  }
+
+  h2 { font-size: 1.4rem; margin: 0 0 6px; }
+  h3 { font-size: 1.05rem; margin: 0 0 10px; }
+
+  p { margin: 0 0 14px; color: var(--text-dim); max-width: 68ch; }
+
+  a { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  a:hover { text-decoration-thickness: 2px; }
+
+  code, .mono { font-family: var(--font-mono); }
+
+  section {
+    padding-block: 56px;
+    border-bottom: 1px solid var(--border);
+  }
+  section:last-of-type { border-bottom: none; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0 0 10px;
+  }
+
+  header.top {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  header.top .bar {
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 12px;
+    flex-wrap: wrap;
+  }
+  header.top .wordmark {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header.top .wordmark::before {
+    content: "";
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent);
+  }
+  header.top nav {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  header.top nav a { color: var(--text-dim); }
+  header.top nav a:hover { color: var(--accent); }
+
+  .hero { padding-top: 48px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 36px;
+    align-items: center;
+  }
+  @media (max-width: 720px) {
+    .hero-grid { grid-template-columns: 1fr; }
+  }
+
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 22px; }
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .pill b { color: var(--text); font-weight: 600; }
+
+  .term {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px -30px rgba(0,0,0,0.6);
+  }
+  .term .chrome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--panel-alt);
+    border-bottom: 1px solid var(--border);
+  }
+  .term .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .term .dot.r { background: var(--bad); }
+  .term .dot.y { background: var(--warn); }
+  .term .dot.g { background: var(--good); }
+  .term .title {
+    margin-left: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+  }
+  .term pre {
+    margin: 0;
+    padding: 18px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .term .prompt { color: var(--info); }
+  .term .cmd { color: var(--text); }
+  .term .out { color: var(--text-dim); }
+  .term .cursor {
+    display: inline-block;
+    width: 7px; height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: -2px;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  h1.wordmark-big {
+    font-family: var(--font-mono);
+    font-size: clamp(2.4rem, 7vw, 3.6rem);
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+  }
+  .hero p.lead { font-size: 1.05rem; max-width: 46ch; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 20px 18px;
+  }
+  .card .badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .badge--mock { background: color-mix(in srgb, var(--peach) 18%, transparent); color: var(--peach); }
+  .badge--real { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+  .card ul { margin: 12px 0 0; padding-left: 18px; color: var(--text-dim); }
+  .card li { margin-bottom: 6px; }
+
+  figure { margin: 26px 0 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figure svg text { font-family: var(--font-mono); fill: currentColor; }
+  figcaption {
+    margin-top: 14px;
+    font-size: 0.86rem;
+    color: var(--text-faint);
+    max-width: 68ch;
+  }
+
+  .diagram-box { fill: var(--panel); stroke: var(--border-strong); stroke-width: 1.5; }
+  .diagram-box.dim { fill: var(--panel-alt); }
+  .diagram-text { font-size: 12px; }
+  .diagram-text.small { font-size: 10px; fill: var(--text-dim, currentColor); opacity: 0.85; }
+  .diagram-line { stroke: currentColor; stroke-width: 1.5; fill: none; opacity: 0.55; }
+  .diagram-line.gap { stroke: var(--accent-2); stroke-dasharray: 5 4; opacity: 0.9; }
+  .diagram-label { font-size: 10.5px; fill: var(--text-faint, currentColor); }
+  .diagram-label.gap { fill: var(--accent-2); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; }
+  td code { background: var(--panel-alt); border: 1px solid var(--border); padding: 2px 6px; border-radius: 5px; font-size: 0.82rem; white-space: nowrap; }
+  td.desc { color: var(--text-dim); }
+
+  .codeblock {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    overflow-x: auto;
+    color: var(--text);
+    margin: 14px 0;
+  }
+  .codeblock .c { color: var(--text-faint); }
+  .codeblock .prompt { color: var(--info); }
+
+  .timeline { margin-top: 22px; position: relative; padding-left: 26px; }
+  .timeline::before {
+    content: "";
+    position: absolute; left: 5px; top: 6px; bottom: 6px;
+    width: 1px; background: var(--border-strong);
+  }
+  .t-item { position: relative; padding-bottom: 26px; }
+  .t-item:last-child { padding-bottom: 0; }
+  .t-item::before {
+    content: "";
+    position: absolute; left: -26px; top: 3px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--bg);
+  }
+  .t-item .step { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-faint); margin-bottom: 4px; }
+  .t-item h3 { font-size: 0.95rem; margin-bottom: 4px; }
+  .t-item p { margin: 0; font-size: 0.92rem; }
+
+  .roadmap { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
+  .roadmap li {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.92rem;
+    color: var(--text-dim);
+  }
+  .roadmap li::before {
+    content: "";
+    flex: none;
+    margin-top: 4px;
+    width: 13px; height: 13px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border-strong);
+  }
+
+  .skill-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+  .skill-list li {
+    padding-left: 20px;
+    position: relative;
+    color: var(--text-dim);
+    font-size: 0.93rem;
+  }
+  .skill-list li::before {
+    content: "▸";
+    position: absolute; left: 0; color: var(--accent-2);
+  }
+
+  footer {
+    padding-block: 40px 60px;
+    font-size: 0.82rem;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer a { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <div class="wordmark">sieg</div>
+    <nav>
+      <a href="#overview">overview</a>
+      <a href="#architecture">architecture</a>
+      <a href="#cli">cli</a>
+      <a href="#skill">claude skill</a>
+      <a href="#timeline">timeline</a>
+      <a href="#roadmap">roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="overview">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">project map · v0.2.0</p>
+        <h1 class="wordmark-big">Sieg</h1>
+        <p class="lead">A terminal workspace tool being built in two tracks at once: a <b style="color:var(--text)">visual mockup</b> of the eventual UI, and a small but <b style="color:var(--text)">real</b> background pane manager that Claude Code can already drive.</p>
+        <div class="pills">
+          <div class="pill">repo <b><a href="https://github.com/daymer-perdomo/sieg" style="color:inherit">daymer-perdomo/sieg</a></b></div>
+          <div class="pill">platform <b>macOS</b> (arm64 + x86_64)</div>
+          <div class="pill">license-free deps <b>MIT</b> (ratatui, crossterm)</div>
+        </div>
+      </div>
+      <div class="term">
+        <div class="chrome">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <div class="title">zsh — 80×20</div>
+        </div>
+        <pre><span class="prompt">$</span> <span class="cmd">curl -fsSL https://raw.githubusercontent.com/daymer-perdomo/sieg/main/install.sh | sh</span>
+<span class="out">downloading sieg-macos-aarch64...
+installed to ~/.local/bin/sieg</span>
+
+<span class="prompt">$</span> <span class="cmd">sieg spawn build -- cargo build --release</span>
+<span class="out">spawned pane "build"</span>
+
+<span class="prompt">$</span> <span class="cmd">sieg list</span>
+<span class="out">NAME    STATUS    COMMAND
+build   running   cargo build --release</span>
+<span class="prompt">$</span> <span class="cursor"></span></pre>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="badge badge--mock">MOCK — visual only</span>
+        <h3>TUI mockup</h3>
+        <p style="margin:0">Sidebar, tabs, panes, status bar, onboarding — built with <code>ratatui</code> + <code>crossterm</code>, styled with catppuccin. Every workspace, agent and line of pane output is hardcoded.</p>
+        <ul>
+          <li><code>src/ui.rs</code> — all rendering</li>
+          <li><code>src/data.rs</code> — fake sample data</li>
+          <li>Run with <code>sieg</code> (no args)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="badge badge--real">REAL — actually works</span>
+        <h3>Pane manager</h3>
+        <p style="margin:0">A local server owns real PTY-backed processes. The CLI is a thin client over a Unix socket. This is what the Claude skill drives.</p>
+        <ul>
+          <li><code>spawn · list · send · read · kill</code></li>
+          <li>Detached server, auto-started on first use</li>
+          <li>Not yet shown in the TUI mockup above</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <p class="eyebrow">architecture</p>
+    <h2>One binary, two paths that don't meet yet</h2>
+    <p>Both halves ship in the same <code>sieg</code> executable and branch on <code>argv</code>. The left path is pure rendering of fake data. The right path is a real client/server split: the CLI never touches a PTY directly — it asks a detached background server to, over a local socket.</p>
+
+    <figure>
+      <svg viewBox="0 0 920 560" role="img" aria-label="sieg's binary dispatches on argv into two unconnected paths: a no-args path that renders hardcoded data.rs through the TUI, and a subcommand path where the CLI talks over a Unix socket to a detached server that owns real PTY child processes; a dashed line marks that the TUI side is not wired to the real pane manager yet.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" opacity="0.6" />
+          </marker>
+          <marker id="arrow-gap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent-2)" />
+          </marker>
+        </defs>
+
+        <!-- top: single binary -->
+        <rect class="diagram-box" x="360" y="16" width="200" height="46" rx="8" />
+        <text class="diagram-text" x="460" y="44" text-anchor="middle">sieg (single binary)</text>
+
+        <!-- diverging arrows -->
+        <line class="diagram-line" x1="430" y1="62" x2="270" y2="122" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="300" y="90" text-anchor="middle">no args</text>
+
+        <line class="diagram-line" x1="500" y1="62" x2="660" y2="122" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="640" y="90" text-anchor="middle">spawn · list · send · read · kill</text>
+
+        <!-- left column -->
+        <rect class="diagram-box" x="150" y="128" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="260" y="157" text-anchor="middle">TUI mode (ui.rs)</text>
+
+        <line class="diagram-line" x1="260" y1="176" x2="260" y2="216" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="278" y="200">renders</text>
+
+        <rect class="diagram-box dim" x="150" y="220" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="260" y="249" text-anchor="middle">data.rs — hardcoded</text>
+
+        <line class="diagram-line" x1="260" y1="268" x2="260" y2="308" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="278" y="292">draws</text>
+
+        <rect class="diagram-box" x="150" y="312" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="260" y="341" text-anchor="middle">ratatui screen</text>
+        <text class="diagram-text small" x="260" y="354" text-anchor="middle">(mock only)</text>
+
+        <!-- right column -->
+        <rect class="diagram-box" x="550" y="128" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="660" y="157" text-anchor="middle">CLI (cli.rs)</text>
+
+        <line class="diagram-line" x1="660" y1="176" x2="660" y2="216" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="678" y="200">connects via</text>
+
+        <rect class="diagram-box" x="550" y="220" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="660" y="249" text-anchor="middle">client.rs</text>
+
+        <line class="diagram-line" x1="660" y1="268" x2="660" y2="308" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="678" y="292">auto-starts if down</text>
+
+        <rect class="diagram-box dim" x="550" y="312" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="660" y="335" text-anchor="middle">Unix socket</text>
+        <text class="diagram-text small" x="660" y="350" text-anchor="middle">~/.sieg/sieg.sock</text>
+
+        <line class="diagram-line" x1="660" y1="360" x2="660" y2="400" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="678" y="384">one JSON request / connection</text>
+
+        <rect class="diagram-box" x="550" y="404" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="660" y="427" text-anchor="middle">server (__serve)</text>
+        <text class="diagram-text small" x="660" y="442" text-anchor="middle">detached via setsid</text>
+
+        <line class="diagram-line" x1="660" y1="452" x2="660" y2="492" marker-end="url(#arrow)" />
+        <text class="diagram-label" x="700" y="476">owns, 2 threads/pane</text>
+
+        <rect class="diagram-box" x="550" y="496" width="220" height="48" rx="8" />
+        <text class="diagram-text" x="660" y="519" text-anchor="middle">real PTY panes</text>
+        <text class="diagram-text small" x="660" y="534" text-anchor="middle">portable-pty child processes</text>
+
+        <!-- the gap between the two halves -->
+        <line class="diagram-line gap" x1="370" y1="336" x2="550" y2="428" marker-end="url(#arrow-gap)" />
+        <text class="diagram-label gap" x="460" y="370" text-anchor="middle">not wired</text>
+        <text class="diagram-label gap" x="460" y="384" text-anchor="middle">up yet</text>
+      </svg>
+      <figcaption>The TUI and the pane manager are both real code paths in the same binary, but nothing currently connects them — the mockup screen never reads from the socket, and the server has no renderer. That gap is the next architectural step, not an oversight.</figcaption>
+    </figure>
+  </section>
+
+  <section id="cli">
+    <p class="eyebrow">pane manager</p>
+    <h2>CLI reference</h2>
+    <p>The first <code>spawn</code> auto-starts the server if it isn't already running. Panes keep running after the shell that spawned them exits.</p>
+
+    <table>
+      <thead>
+        <tr><th>command</th><th class="desc">what it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>sieg spawn &lt;name&gt; -- &lt;cmd...&gt;</code></td><td class="desc">Starts a real background pane running <code>&lt;cmd...&gt;</code>. Fails if <code>&lt;name&gt;</code> is already registered, running or exited.</td></tr>
+        <tr><td><code>sieg list</code></td><td class="desc">Lists every pane with its status (<code>running</code> or <code>exited(&lt;code&gt;)</code>) and the command it was started with.</td></tr>
+        <tr><td><code>sieg send &lt;name&gt; &lt;text...&gt;</code></td><td class="desc">Writes <code>&lt;text...&gt;</code> plus a newline to the pane's stdin, as if typed.</td></tr>
+        <tr><td><code>sieg read &lt;name&gt; [lines]</code></td><td class="desc">Prints the pane's buffered output (stdout+stderr, PTY-merged, capped ~200KB). Optionally just the last N lines.</td></tr>
+        <tr><td><code>sieg kill &lt;name&gt;</code></td><td class="desc">Terminates the process. Status becomes <code>exited</code>; the name stays reserved — there's no <code>remove</code> yet.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="codeblock"><span class="c"># run from source</span>
+<span class="prompt">$</span> cargo run                 <span class="c"># the visual TUI mockup</span>
+<span class="prompt">$</span> cargo run -- list         <span class="c"># the real pane manager CLI</span></div>
+  </section>
+
+  <section id="skill">
+    <p class="eyebrow">claude code integration</p>
+    <h2>The Sieg skill</h2>
+    <p>The repo ships <a href="https://github.com/daymer-perdomo/sieg/blob/main/skills/sieg/SKILL.md"><code>skills/sieg/SKILL.md</code></a>, which teaches Claude Code to drive the pane manager above — this is the piece that makes the CLI more than a manual tool.</p>
+
+    <div class="codeblock"><span class="prompt">$</span> npx skills add daymer-perdomo/sieg --skill sieg -g</div>
+
+    <h3 style="margin-top:26px">When Claude reaches for it</h3>
+    <ul class="skill-list">
+      <li>Running something long (a dev server, a build watch, a test suite) without blocking the conversation — spawn it, read it back later.</li>
+      <li>Running several things concurrently and checking each independently, one distinct name per task.</li>
+      <li>Answering an interactive prompt inside a background process via <code>send</code>.</li>
+      <li>Killing a pane that's stuck or was started by mistake.</li>
+    </ul>
+  </section>
+
+  <section id="timeline">
+    <p class="eyebrow">how we got here</p>
+    <h2>Timeline</h2>
+    <div class="timeline">
+      <div class="t-item">
+        <div class="step">01</div>
+        <h3>Visual mockup, separate from herdr-v2</h3>
+        <p>Built in its own folder, hand-copying herdr's real catppuccin palette and roughly matching its sidebar/tabs/panes/onboarding layout — with fully hardcoded data. No dependency on herdr's code.</p>
+      </div>
+      <div class="t-item">
+        <div class="step">02</div>
+        <h3>Renamed herdr → Sieg</h3>
+        <p>Package, binary, UI text and repo renamed throughout; first to <code>sieg-ui-mockup</code>, then trimmed to just <code>sieg</code>.</p>
+      </div>
+      <div class="t-item">
+        <div class="step">03</div>
+        <h3>Real distribution set up</h3>
+        <p>Public GitHub repo, a release workflow building macOS binaries on tag push, and a <code>curl | sh</code> install script — mirroring herdr's own install flow.</p>
+      </div>
+      <div class="t-item">
+        <div class="step">04</div>
+        <h3>Moved to the correct GitHub account</h3>
+        <p>First created under <code>daymer003</code> by mistake; re-created under <code>daymer-perdomo</code> once authenticated, with every reference repointed.</p>
+      </div>
+      <div class="t-item">
+        <div class="step">05</div>
+        <h3>Fixed the release workflow</h3>
+        <p>The x86_64 build used a <code>macos-13</code> runner that was badly queue-congested (10+ minute waits). Switched to cross-compiling both targets on one <code>macos-14</code> runner.</p>
+      </div>
+      <div class="t-item">
+        <div class="step">06</div>
+        <h3>First real functionality: the pane manager</h3>
+        <p>Added the socket server, the <code>spawn/list/send/read/kill</code> CLI, and <code>skills/sieg/SKILL.md</code> — shipped as <b style="color:var(--text)">v0.2.0</b>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <p class="eyebrow">not done yet</p>
+    <h2>Roadmap</h2>
+    <ul class="roadmap">
+      <li>Wire the TUI mockup to the real pane manager — show actual <code>sieg list</code> state instead of <code>data.rs</code>'s hardcoded panes.</li>
+      <li>Agent state detection (idle / working / blocked) — today <code>sieg list</code> only reports process running/exited, nothing like herdr's detection engine.</li>
+      <li>A <code>sieg remove</code> command, so an exited pane's name can be reused without restarting the server.</li>
+      <li>An in-binary update check (<code>sieg update</code>) — installs are currently a fully manual re-run of the curl script.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>generated from the build session — see <a href="https://github.com/daymer-perdomo/sieg/blob/main/DEVELOPMENT.md">DEVELOPMENT.md</a> in the repo for the full log</span>
+    <span><a href="https://github.com/daymer-perdomo/sieg">github.com/daymer-perdomo/sieg</a></span>
+  </footer>
+</main>
+</body>
+</html>
