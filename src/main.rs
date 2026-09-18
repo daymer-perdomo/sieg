@@ -1,5 +1,9 @@
+mod cli;
+mod client;
 mod data;
 mod palette;
+mod protocol;
+mod server;
 mod ui;
 
 use std::io;
@@ -14,6 +18,28 @@ use ratatui::Terminal;
 use ui::AppState;
 
 fn main() -> io::Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match args.first().map(String::as_str) {
+        None => run_tui(),
+        Some("__serve") => server::run(),
+        Some("spawn") => cli::spawn(&args[1..]),
+        Some("list") => cli::list(),
+        Some("send") => cli::send(&args[1..]),
+        Some("read") => cli::read(&args[1..]),
+        Some("kill") => cli::kill(&args[1..]),
+        Some("help" | "-h" | "--help") => {
+            cli::print_help();
+            Ok(())
+        }
+        Some(other) => {
+            eprintln!("unknown command: {other}\n");
+            cli::print_help();
+            std::process::exit(2);
+        }
+    }
+}
+
+fn run_tui() -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;

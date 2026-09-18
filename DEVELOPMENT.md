@@ -6,28 +6,72 @@ agent) works on the repo next.
 
 ## what this is
 
-`sieg` is a **visual-only mockup**, not the real app. It's a standalone Rust
-TUI built with `ratatui` + `crossterm` that renders a fake sidebar, tab bar,
-panes, status bar, and onboarding modal with **hardcoded sample data** — no
-PTYs, no real agent detection, no server/client architecture. It exists to
-iterate on layout and color before any real functionality gets built.
+`sieg` has two independent halves, both in the same binary:
 
-The layout and catppuccin color values were originally modeled after the
-[herdr](https://herdr.dev) TUI (`herdr-v2` repo) as a visual reference, then
-fully renamed and decoupled — `sieg` does not depend on or import from herdr
-in any way. It's its own repo, its own binary.
+1. **The visual TUI mockup** (`sieg`, no args) — a standalone Rust TUI built
+   with `ratatui` + `crossterm` that renders a fake sidebar, tab bar, panes,
+   status bar, and onboarding modal with **hardcoded sample data**. No PTYs,
+   no real agent detection. Exists to iterate on layout and color.
+2. **The pane manager** (`sieg spawn|list|send|read|kill`) — real, not
+   mocked. A local Unix-socket server owns real PTY-backed child processes
+   (via `portable-pty`); the CLI subcommands are thin clients that talk to it.
+   This is the first piece of *real* functionality, built specifically so a
+   Claude Code skill (`skills/sieg/SKILL.md`) has something genuine to drive.
+
+**These two halves don't talk to each other yet.** The TUI still renders only
+`src/data.rs`'s hardcoded fake panes; it does not show panes spawned via the
+CLI. Wiring the TUI to visualize real pane manager state is a future step,
+not done.
+
+The TUI's layout and catppuccin color values were originally modeled after
+the [herdr](https://herdr.dev) TUI (`herdr-v2` repo) as a visual reference,
+then fully renamed and decoupled — `sieg` does not depend on or import from
+herdr in any way. It's its own repo, its own binary. The pane-manager +
+CLI-skill pattern is also modeled after herdr (which calls this
+"agent-native": agents drive it through a CLI/socket API), but sieg's version
+is a from-scratch, much smaller implementation — no agent state detection
+(idle/working/blocked), no multi-workspace/tab model, just spawn/list/send/
+read/kill against a flat name → pane registry.
 
 ## project layout
 
 ```
 src/
-  main.rs     — crossterm/ratatui event loop (keyboard input, draw loop)
-  ui.rs       — all rendering: sidebar, tab bar, panes, status bar, onboarding modal
-  data.rs     — hardcoded mock data (workspaces, tabs, panes, agent states)
-  palette.rs  — catppuccin color values used across the UI
+  main.rs     — entry point; dispatches to the TUI or a CLI subcommand
+  ui.rs       — TUI rendering: sidebar, tab bar, panes, status bar, onboarding modal
+  data.rs     — hardcoded mock data for the TUI (workspaces, tabs, panes, agent states)
+  palette.rs  — catppuccin color values used across the TUI
+  protocol.rs — Request/Response types shared by the CLI client and server (serde/JSON)
+  server.rs   — the pane manager: owns real PTYs (portable-pty), one thread per pane
+                for reading output + waiting on exit; listens on a Unix socket
+  client.rs   — connects to the server socket, auto-spawning it (detached, via
+                setsid) if it isn't already running
+  cli.rs      — argument parsing + printing for spawn/list/send/read/kill
+skills/sieg/SKILL.md          — Claude Code skill teaching the pane manager CLI
 .github/workflows/release.yml — builds + publishes macOS binaries on tag push
 install.sh    — curl-installable script, fetches latest GitHub release binary
 ```
+
+### pane manager design notes
+
+- **Socket**: `~/.sieg/sieg.sock`, plain JSON-lines request/response, one
+  request per connection (not a persistent stream).
+- **Server lifecycle**: not started by anything explicit. The first CLI
+  command that needs it (`ensure_server_running` in `client.rs`) tries to
+  connect; on failure it spawns `sieg __serve` detached (`setsid`, stdio to
+  `/dev/null`) and retries the connection for up to 3s. It keeps running
+  after the CLI process exits — that's the point (panes survive).
+- **Per-pane threads**: each spawned pane gets two threads — one blocking on
+  `reader.read()` to append PTY output into a capped `Vec<u8>` (200KB,
+  oldest bytes dropped), and one polling `child.try_wait()` every 200ms
+  (also draining a kill-request channel) to record the exit code without
+  holding a lock that would block concurrent `kill` calls.
+- **No cleanup command**: `kill` stops the process but leaves it in the
+  registry as `exited(<code>)`. There's no `sieg remove`; re-spawning a used
+  name is refused. Documented as a known limitation in the skill file.
+- **macOS/Unix only**: uses `std::os::unix::net::UnixListener` and
+  `libc::setsid` directly (no cross-platform abstraction), consistent with
+  the rest of the project being macOS-only for now.
 
 ## accounts / hosting
 
@@ -128,8 +172,11 @@ filenames.)
 
 ## next steps (not done yet)
 
-- Real functionality beyond the visual mockup — PTYs, real agent state, etc.
-  Nothing here is real; every "agent", "workspace", and "tab" is a hardcoded
-  string in `src/data.rs`.
+- Wire the TUI to the real pane manager (show actual `sieg list` state
+  instead of `src/data.rs`'s hardcoded panes).
+- Real agent state detection (idle/working/blocked) — herdr's version of
+  this is a whole manifest-based detection engine; sieg has nothing like it,
+  `sieg list` only reports process running/exited.
+- A `sieg remove` command to clear exited panes from the registry.
 - Optional: an in-binary update check / `sieg update` command, since
   installs are currently fully manual (see "shipping an update" above).

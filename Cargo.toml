@@ -2,9 +2,13 @@
 name = "sieg"
 version = "0.1.0"
 edition = "2021"
-description = "visual-only mockup of the Sieg TUI — layout/color exploration, no real agent or PTY logic"
+description = "Sieg — visual TUI mockup plus a minimal real background pane manager (CLI + local server)"
 publish = false
 
 [dependencies]
 crossterm = "0.29"
 ratatui = "0.30"
+portable-pty = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libc = "0.2"
