@@ -1,0 +1,10 @@
+[package]
+name = "herdr-ui-mockup"
+version = "0.1.0"
+edition = "2021"
+description = "visual-only mockup of the herdr TUI — layout/color exploration, no real agent or PTY logic"
+publish = false
+
+[dependencies]
+crossterm = "0.29"
+ratatui = "0.30"
