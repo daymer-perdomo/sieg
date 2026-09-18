@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-REPO="daymer003/herdr-ui-mockup"
-BIN_NAME="herdr-ui-mockup"
-INSTALL_DIR="${HERDR_UI_MOCKUP_INSTALL_DIR:-$HOME/.local/bin}"
+REPO="daymer003/sieg-ui-mockup"
+BIN_NAME="sieg-ui-mockup"
+INSTALL_DIR="${SIEG_UI_MOCKUP_INSTALL_DIR:-$HOME/.local/bin}"
 
 os="$(uname -s)"
 arch="$(uname -m)"

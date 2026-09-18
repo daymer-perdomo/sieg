@@ -1,6 +1,7 @@
 use ratatui::style::Color;
 
-/// Catppuccin Mocha, matching `herdr`'s default `Palette::catppuccin()`.
+/// Catppuccin Mocha color values for Sieg's UI (originally copied from the
+/// `herdr` project's default `Palette::catppuccin()` as a layout reference).
 /// Copied here (not imported) since this crate is a standalone visual mockup.
 // Full palette kept even where unused so screens added later can draw from it directly.
 #[allow(dead_code)]

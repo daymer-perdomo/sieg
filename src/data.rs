@@ -48,7 +48,7 @@ pub struct MockWorkspace {
 pub fn mock_workspaces() -> Vec<MockWorkspace> {
     vec![
         MockWorkspace {
-            name: "herdr-v2",
+            name: "sieg",
             branch: "master",
             ahead: 2,
             behind: 0,
@@ -61,7 +61,7 @@ pub fn mock_workspaces() -> Vec<MockWorkspace> {
                             state: AgentState::Working,
                             content: vec![
                                 "$ cargo build",
-                                "   Compiling herdr v0.9.1",
+                                "   Compiling sieg v0.1.0",
                                 "    Finished dev [unoptimized] target(s) in 4.2s",
                                 "",
                                 "> refactoring sidebar token layout...",
