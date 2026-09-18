@@ -1,4 +1,4 @@
-# sieg-ui-mockup
+# sieg
 
 Visual-only mockup of **Sieg** — layout and color exploration, no real
 agent/PTY functionality. Built with `ratatui` + `crossterm`, using catppuccin
@@ -9,7 +9,7 @@ All data (workspaces, tabs, agents) is hardcoded for visual iteration.
 ## install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/daymer003/sieg-ui-mockup/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/daymer003/sieg/main/install.sh | sh
 ```
 
 macOS only (arm64 and x86_64).

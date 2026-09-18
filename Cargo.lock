@@ -1163,7 +1163,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sieg-ui-mockup"
+name = "sieg"
 version = "0.1.0"
 dependencies = [
  "crossterm",

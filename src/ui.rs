@@ -231,7 +231,7 @@ fn render_tab_bar(frame: &mut Frame, area: Rect, app: &AppState) {
 fn render_status_bar(frame: &mut Frame, area: Rect, app: &AppState) {
     let p = &app.palette;
     let line = Line::from(vec![
-        Span::styled(" sieg-ui-mockup ", Style::default().fg(p.accent)),
+        Span::styled(" sieg ", Style::default().fg(p.accent)),
         Span::styled(
             "· ↑/↓ workspace · ←/→ tab · o onboarding · q quit",
             Style::default().fg(p.overlay0),

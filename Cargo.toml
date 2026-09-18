@@ -1,5 +1,5 @@
 [package]
-name = "sieg-ui-mockup"
+name = "sieg"
 version = "0.1.0"
 edition = "2021"
 description = "visual-only mockup of the Sieg TUI — layout/color exploration, no real agent or PTY logic"

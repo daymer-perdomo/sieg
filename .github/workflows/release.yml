@@ -15,10 +15,10 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             runner: macos-14
-            asset: sieg-ui-mockup-macos-aarch64
+            asset: sieg-macos-aarch64
           - target: x86_64-apple-darwin
             runner: macos-13
-            asset: sieg-ui-mockup-macos-x86_64
+            asset: sieg-macos-x86_64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/sieg-ui-mockup dist/${{ matrix.asset }}
+          cp target/${{ matrix.target }}/release/sieg dist/${{ matrix.asset }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}
