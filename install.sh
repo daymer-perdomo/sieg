@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-REPO="daymer003/sieg"
+REPO="daymer-perdomo/sieg"
 BIN_NAME="sieg"
 INSTALL_DIR="${SIEG_INSTALL_DIR:-$HOME/.local/bin}"
 

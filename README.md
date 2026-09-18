@@ -9,7 +9,7 @@ All data (workspaces, tabs, agents) is hardcoded for visual iteration.
 ## install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/daymer003/sieg/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/daymer-perdomo/sieg/main/install.sh | sh
 ```
 
 macOS only (arm64 and x86_64).
