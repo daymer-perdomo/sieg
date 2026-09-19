@@ -1,6 +1,6 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -9,7 +9,7 @@ use ratatui::{
 use crate::client::send_request;
 use crate::palette::Palette;
 use crate::protocol::{PaneInfo, PaneStatus, Request};
-use crate::pty_text::render_pty_lines;
+use crate::pty_text::{render_pty_lines, AnsiColor, Span as PtySpan};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Focus {
@@ -39,13 +39,27 @@ pub fn default_shell() -> String {
     std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
 }
 
+/// Shortens a pane's cwd the way a shell prompt would (`/Users/x/Documents`
+/// -> `~/Documents`), so the highlighted path in the title bar stays short.
+fn abbreviate_home(path: &str) -> String {
+    match std::env::var("HOME") {
+        Ok(home) if !home.is_empty() && path == home => "~".to_string(),
+        Ok(home) if !home.is_empty() => match path.strip_prefix(&home) {
+            Some(rest) if rest.starts_with('/') => format!("~{rest}"),
+            _ => path.to_string(),
+        },
+        _ => path.to_string(),
+    }
+}
+
 pub struct AppState {
     pub palette: Palette,
     pub show_onboarding: bool,
     pub focus: Focus,
     pub panes: Vec<PaneInfo>,
     pub selected_name: Option<String>,
-    pub pane_lines: Vec<String>,
+    pub pane_lines: Vec<Vec<PtySpan>>,
+    pub pane_cwd: Option<String>,
     pub spawn_form: Option<SpawnForm>,
     pub status_message: Option<String>,
 }
@@ -59,6 +73,7 @@ impl AppState {
             panes: Vec::new(),
             selected_name: None,
             pane_lines: Vec::new(),
+            pane_cwd: None,
             spawn_form: None,
             status_message: None,
         };
@@ -86,17 +101,21 @@ impl AppState {
             }
         }
 
-        self.pane_lines = match &self.selected_name {
+        match &self.selected_name {
             Some(name) => match send_request(&Request::Read {
                 name: name.clone(),
                 lines: None,
             }) {
                 Ok(response) if response.ok => {
-                    render_pty_lines(response.output.unwrap_or_default().as_bytes())
+                    self.pane_lines = render_pty_lines(response.output.unwrap_or_default().as_bytes());
+                    self.pane_cwd = response.cwd.map(|cwd| abbreviate_home(&cwd));
                 }
-                _ => std::mem::take(&mut self.pane_lines),
+                _ => {}
             },
-            None => Vec::new(),
+            None => {
+                self.pane_lines = Vec::new();
+                self.pane_cwd = None;
+            }
         };
     }
 
@@ -303,18 +322,30 @@ fn render_main(frame: &mut Frame, area: Rect, app: &AppState) {
     let p = &app.palette;
     let border_color = if app.focus == Focus::Pane { p.accent } else { p.surface1 };
 
-    let title = match app.selected_name.as_deref() {
+    let title: Line = match app.selected_name.as_deref() {
         Some(name) => {
             let mode = if app.focus == Focus::Pane { "typing — ctrl+b to detach" } else { "enter to focus" };
-            format!(" {name} · {mode} ")
+            let mut spans = vec![Span::styled(format!(" {name} "), Style::default().fg(p.text))];
+            // Highlight the pane's current directory in the title bar — the
+            // one visible, always-on answer to "which folder am I in".
+            if let Some(cwd) = &app.pane_cwd {
+                spans.push(Span::styled("· ", Style::default().fg(p.overlay0)));
+                spans.push(Span::styled(
+                    cwd.clone(),
+                    Style::default().fg(p.teal).add_modifier(Modifier::BOLD),
+                ));
+                spans.push(Span::raw(" "));
+            }
+            spans.push(Span::styled(format!("· {mode} "), Style::default().fg(p.text)));
+            Line::from(spans)
         }
-        None => " no pane selected ".to_string(),
+        None => Line::from(Span::styled(" no pane selected ", Style::default().fg(p.text))),
     };
 
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color))
-        .title(Span::styled(title, Style::default().fg(p.text)));
+        .title(title);
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -332,9 +363,39 @@ fn render_main(frame: &mut Frame, area: Rect, app: &AppState) {
     let visible = &app.pane_lines[start..];
     let lines: Vec<Line> = visible
         .iter()
-        .map(|line| Line::from(Span::styled(line.clone(), Style::default().fg(p.text))))
+        .map(|line| {
+            let spans: Vec<Span> = line
+                .iter()
+                .map(|span| {
+                    let mut style = Style::default().fg(ansi_color(span.style.color, p));
+                    if span.style.bold {
+                        style = style.add_modifier(Modifier::BOLD);
+                    }
+                    Span::styled(span.text.clone(), style)
+                })
+                .collect();
+            Line::from(spans)
+        })
         .collect();
     frame.render_widget(Paragraph::new(lines), inner);
+}
+
+/// Maps a pane's SGR-parsed color onto the TUI's own catppuccin palette,
+/// so a shell prompt's `\e[36m` (say, highlighting the cwd) reads as an
+/// on-theme accent instead of a raw ANSI color clashing with the rest of
+/// the UI.
+fn ansi_color(color: Option<AnsiColor>, p: &Palette) -> Color {
+    match color {
+        None => p.text,
+        Some(AnsiColor::Black) => p.surface1,
+        Some(AnsiColor::Red) => p.red,
+        Some(AnsiColor::Green) => p.green,
+        Some(AnsiColor::Yellow) => p.yellow,
+        Some(AnsiColor::Blue) => p.blue,
+        Some(AnsiColor::Magenta) => p.mauve,
+        Some(AnsiColor::Cyan) => p.teal,
+        Some(AnsiColor::White) => p.text,
+    }
 }
 
 fn render_status_bar(frame: &mut Frame, area: Rect, app: &AppState) {

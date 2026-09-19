@@ -601,6 +601,11 @@ build   running   cargo build --release</span>
         <h3>Fixed the scrollback renderer and pane defaults</h3>
         <p>Three bugs surfaced by hands-on testing, all in how a real PTY's bytes reach the screen. <code>render_pty_lines</code> treated every <code>\r</code> as a redraw-in-place and cleared the line it was on — but a PTY ends every ordinary line with <code>\r\n</code>, so completed output (a shell banner, an <code>ls</code> listing) was erasing itself a moment before the newline landed, leaving only the last prompt visible. Raw tabs were passed through unexpanded, so <code>ls</code>'s tab-separated columns rendered mashed together — ratatui doesn't interpret <code>\t</code> on its own. And a freshly spawned pane's command field started blank, inviting a bare <code>bash</code> with no directory-aware prompt, which made <code>cd</code> look broken even though it worked. Fixed the first two in <code>pty_text.rs</code> (a <code>\r</code> only clears when it's <em>not</em> followed by <code>\n</code>; tabs expand to the next 8-column stop); the spawn form now prefills the command field with <code>$SHELL</code> so a new pane starts like a real terminal session.</p>
       </div>
+      <div class="t-item">
+        <div class="step">09</div>
+        <h3>cwd-aware pane title + basic ANSI color</h3>
+        <p>Wanted to always know which directory a focused pane is in, highlighted so it's obvious at a glance. First attempt — pre-setting a colored <code>PROMPT</code>/<code>PS1</code> env var when spawning a shell — silently failed: macOS's <code>/etc/zshrc</code> unconditionally reassigns <code>PS1</code> (an alias of <code>PROMPT</code> in zsh) on every interactive shell, clobbering it before the pane was ever read. Replaced with something that doesn't depend on shell config at all: the server resolves a pane's real cwd via <code>lsof -d cwd</code> on every <code>Read</code>, and the TUI highlights it directly in the pane's title bar. Along the way, <code>pty_text.rs</code> gained real SGR (ANSI color) parsing instead of stripping every escape sequence, mapped onto the catppuccin palette — so <code>ls --color</code>, <code>git status</code>, and any colored prompt now render in color too, not just the cwd indicator.</p>
+      </div>
     </div>
   </section>
 
@@ -608,7 +613,7 @@ build   running   cargo build --release</span>
     <p class="eyebrow">not done yet</p>
     <h2>Roadmap</h2>
     <ul class="roadmap">
-      <li>A real terminal emulator (cursor grid, color) instead of the linear scrollback interpreter — needed for full-screen programs (vim, htop) to render correctly.</li>
+      <li>A real terminal emulator (cursor grid) instead of the linear scrollback interpreter — needed for full-screen programs (vim, htop) to render correctly. Basic 8-color ANSI is understood already; 256-color/truecolor and cursor positioning are not.</li>
       <li>Agent state detection (idle / working / blocked) — today <code>sieg list</code> only reports process running/exited, nothing like herdr's detection engine.</li>
       <li>A <code>sieg remove</code> command, so an exited pane's name can be reused without restarting the server.</li>
       <li>Multiple panes on screen at once (split view) — the TUI currently shows one focused pane at a time.</li>

@@ -35,6 +35,11 @@ pub struct Response {
     pub panes: Vec<PaneInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output: Option<String>,
+    /// The pane's process's current working directory, best-effort (macOS
+    /// `lsof`-derived — absent if the lookup fails or the process exited).
+    /// Only populated on `Read` responses, alongside `output`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
 }
 
 impl Response {
@@ -53,10 +58,11 @@ impl Response {
         }
     }
 
-    pub fn ok_with_output(output: String) -> Self {
+    pub fn ok_with_output(output: String, cwd: Option<String>) -> Self {
         Response {
             ok: true,
             output: Some(output),
+            cwd,
             ..Default::default()
         }
     }

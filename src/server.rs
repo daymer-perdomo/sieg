@@ -23,6 +23,7 @@ struct Pane {
     kill_tx: Sender<()>,
     // Kept alive only so the PTY stays open for the lifetime of the pane.
     _master: Box<dyn MasterPty + Send>,
+    pid: Option<u32>,
 }
 
 type Registry = Arc<Mutex<HashMap<String, Pane>>>;
@@ -111,6 +112,7 @@ fn spawn_pane(registry: &Registry, name: String, command: Vec<String>) -> Respon
         Ok(child) => child,
         Err(err) => return Response::err(format!("failed to spawn {command:?}: {err}")),
     };
+    let pid = child.process_id();
     drop(pair.slave);
 
     let reader = match pair.master.try_clone_reader() {
@@ -150,6 +152,7 @@ fn spawn_pane(registry: &Registry, name: String, command: Vec<String>) -> Respon
         exit_code,
         kill_tx,
         _master: pair.master,
+        pid,
     };
     registry.lock().unwrap().insert(name, pane);
     Response::ok()
@@ -204,21 +207,40 @@ fn send_pane(registry: &Registry, name: &str, text: &str) -> Response {
 
 fn read_pane(registry: &Registry, name: &str, lines: Option<usize>) -> Response {
     let guard = registry.lock().unwrap();
-    match guard.get(name) {
+    let (text, pid) = match guard.get(name) {
         Some(pane) => {
             let buf = pane.output.lock().unwrap();
-            let text = String::from_utf8_lossy(&buf).into_owned();
-            let text = match lines {
-                Some(n) => {
-                    let tail: Vec<&str> = text.lines().rev().take(n).collect();
-                    tail.into_iter().rev().collect::<Vec<_>>().join("\n")
-                }
-                None => text,
-            };
-            Response::ok_with_output(text)
+            (String::from_utf8_lossy(&buf).into_owned(), pane.pid)
         }
-        None => Response::err(format!("no such pane: {name:?}")),
-    }
+        None => return Response::err(format!("no such pane: {name:?}")),
+    };
+    drop(guard);
+
+    let text = match lines {
+        Some(n) => {
+            let tail: Vec<&str> = text.lines().rev().take(n).collect();
+            tail.into_iter().rev().collect::<Vec<_>>().join("\n")
+        }
+        None => text,
+    };
+    let cwd = pid.and_then(process_cwd);
+    Response::ok_with_output(text, cwd)
+}
+
+/// Best-effort lookup of a process's current working directory via `lsof`
+/// (shipped on macOS) — there's no portable-pty API for this, and it's only
+/// needed to show the pane's directory in the TUI, not for correctness.
+/// Returns `None` if `lsof` is missing, the process already exited, or its
+/// output doesn't parse — callers treat that as "unknown", not an error.
+fn process_cwd(pid: u32) -> Option<String> {
+    let output = std::process::Command::new("lsof")
+        .args(["-a", "-p", &pid.to_string(), "-d", "cwd", "-Fn"])
+        .output()
+        .ok()?;
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .find_map(|line| line.strip_prefix('n'))
+        .map(str::to_string)
 }
 
 fn kill_pane(registry: &Registry, name: &str) -> Response {
