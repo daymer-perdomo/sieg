@@ -4,6 +4,26 @@ Internal notes on what this project is, how it got here, and how to ship an
 update. `README.md` is for end users; this file is for whoever (human or
 agent) works on the repo next.
 
+## status — where we left off (2026-09-18)
+
+Shipped and working: **v0.3.0**. The TUI is wired to the real pane manager
+(no mock data left) — spawn a pane with `n`, focus it with `Enter`, type
+into it for real, `ctrl+b` to detach, `x` to kill. Verified end to end,
+including the error path: spawning a bogus command (e.g. `x`, not a real
+binary) correctly surfaces the server's real error in the status bar rather
+than failing silently — that confirmed the whole request/response/render
+loop, not just the happy path.
+
+Also shipped: the pane manager CLI (`spawn/list/send/read/kill`) and the
+Claude Code skill (`skills/sieg/SKILL.md`, installed globally via
+`npx skills add daymer-perdomo/sieg --skill sieg -g`) — both validated live
+in a real Claude Code session.
+
+**Next candidate step**, picking from the roadmap below: most likely either
+(a) a real terminal emulator so full-screen programs render correctly, or
+(b) multiple panes on screen at once (split view). Neither started. Nothing
+is blocked — this is just a natural pause point, not an unresolved issue.
+
 ## what this is
 
 `sieg` is a real (if small) terminal multiplexer, in one binary:
