@@ -1,21 +1,21 @@
 mod cli;
 mod client;
-mod data;
 mod palette;
 mod protocol;
+mod pty_text;
 mod server;
 mod ui;
 
 use std::io;
 use std::time::Duration;
 
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{execute, ExecutableCommand};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
-use ui::AppState;
+use ui::{AppState, Focus, SpawnField, SpawnForm};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -58,37 +58,88 @@ fn run_tui() -> io::Result<()> {
 
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut AppState) -> io::Result<()> {
     loop {
+        app.refresh();
         terminal.draw(|frame| ui::render(frame, app))?;
 
-        if event::poll(Duration::from_millis(200))? {
+        if event::poll(Duration::from_millis(150))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => {
-                        if app.show_onboarding {
-                            app.show_onboarding = false;
-                        } else {
-                            return Ok(());
-                        }
-                    }
-                    KeyCode::Char('o') => app.show_onboarding = !app.show_onboarding,
-                    KeyCode::Down | KeyCode::Char('j') if !app.show_onboarding => {
-                        app.select_workspace(1)
-                    }
-                    KeyCode::Up | KeyCode::Char('k') if !app.show_onboarding => {
-                        app.select_workspace(-1)
-                    }
-                    KeyCode::Right | KeyCode::Char('l') if !app.show_onboarding => {
-                        app.select_tab(1)
-                    }
-                    KeyCode::Left | KeyCode::Char('h') if !app.show_onboarding => {
-                        app.select_tab(-1)
-                    }
-                    _ => {}
+                if handle_key(app, key) {
+                    return Ok(());
                 }
             }
         }
     }
+}
+
+/// Returns `true` if the app should quit.
+fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
+    if let Some(form) = &mut app.spawn_form {
+        match key.code {
+            KeyCode::Esc => app.spawn_form = None,
+            KeyCode::Tab => {
+                form.field = match form.field {
+                    SpawnField::Name => SpawnField::Command,
+                    SpawnField::Command => SpawnField::Name,
+                };
+            }
+            KeyCode::Enter => app.submit_spawn(),
+            KeyCode::Backspace => match form.field {
+                SpawnField::Name => {
+                    form.name.pop();
+                }
+                SpawnField::Command => {
+                    form.command.pop();
+                }
+            },
+            KeyCode::Char(c) => match form.field {
+                SpawnField::Name => form.name.push(c),
+                SpawnField::Command => form.command.push(c),
+            },
+            _ => {}
+        }
+        return false;
+    }
+
+    if app.show_onboarding {
+        match key.code {
+            KeyCode::Char('o') | KeyCode::Esc => app.show_onboarding = false,
+            KeyCode::Char('q') => return true,
+            _ => {}
+        }
+        return false;
+    }
+
+    match app.focus {
+        Focus::Nav => match key.code {
+            KeyCode::Char('q') => return true,
+            KeyCode::Char('o') => app.show_onboarding = true,
+            KeyCode::Up | KeyCode::Char('k') => app.move_selection(-1),
+            KeyCode::Down | KeyCode::Char('j') => app.move_selection(1),
+            KeyCode::Enter if app.selected_name.is_some() => app.focus = Focus::Pane,
+            KeyCode::Char('n') => {
+                app.spawn_form = Some(SpawnForm {
+                    field: SpawnField::Name,
+                    name: String::new(),
+                    command: String::new(),
+                });
+            }
+            KeyCode::Char('x') => app.kill_selected(),
+            _ => {}
+        },
+        Focus::Pane => {
+            let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+            if ctrl && key.code == KeyCode::Char('b') {
+                app.focus = Focus::Nav;
+                return false;
+            }
+            if let Some(bytes) = pty_text::key_to_bytes(key.code, ctrl) {
+                app.send_bytes(bytes);
+            }
+        }
+    }
+
+    false
 }

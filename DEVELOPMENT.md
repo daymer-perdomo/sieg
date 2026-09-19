@@ -6,22 +6,22 @@ agent) works on the repo next.
 
 ## what this is
 
-`sieg` has two independent halves, both in the same binary:
+`sieg` is a real (if small) terminal multiplexer, in one binary:
 
-1. **The visual TUI mockup** (`sieg`, no args) — a standalone Rust TUI built
-   with `ratatui` + `crossterm` that renders a fake sidebar, tab bar, panes,
-   status bar, and onboarding modal with **hardcoded sample data**. No PTYs,
-   no real agent detection. Exists to iterate on layout and color.
-2. **The pane manager** (`sieg spawn|list|send|read|kill`) — real, not
-   mocked. A local Unix-socket server owns real PTY-backed child processes
-   (via `portable-pty`); the CLI subcommands are thin clients that talk to it.
-   This is the first piece of *real* functionality, built specifically so a
-   Claude Code skill (`skills/sieg/SKILL.md`) has something genuine to drive.
+1. **The pane manager** (`sieg spawn|list|send|read|kill`) — a local
+   Unix-socket server that owns real PTY-backed child processes (via
+   `portable-pty`); the CLI subcommands are thin clients that talk to it.
+   Built first, specifically so a Claude Code skill (`skills/sieg/SKILL.md`)
+   had something genuine to drive.
+2. **The TUI** (`sieg`, no args) — a `ratatui` + `crossterm` client of the
+   *same* server. No more mock data: it lists real panes, and focusing one
+   forwards real keystrokes to its real stdin. Output rendering is a
+   lightweight scrollback interpreter (`src/pty_text.rs`), not a real
+   terminal emulator — see "rendering limits" below.
 
-**These two halves don't talk to each other yet.** The TUI still renders only
-`src/data.rs`'s hardcoded fake panes; it does not show panes spawned via the
-CLI. Wiring the TUI to visualize real pane manager state is a future step,
-not done.
+Originally the TUI was a pure visual mockup with hardcoded sample data and
+the pane manager didn't exist yet; wiring them together was a deliberate
+second step (see history below), not the initial design.
 
 The TUI's layout and catppuccin color values were originally modeled after
 the [herdr](https://herdr.dev) TUI (`herdr-v2` repo) as a visual reference,
@@ -33,24 +33,62 @@ is a from-scratch, much smaller implementation — no agent state detection
 (idle/working/blocked), no multi-workspace/tab model, just spawn/list/send/
 read/kill against a flat name → pane registry.
 
+### rendering limits
+
+`src/pty_text.rs` turns raw PTY bytes into scrollback lines: CSI/OSC escape
+sequences are stripped, bare `\r` clears the current line (so redrawn
+prompts/progress bars don't spam duplicate lines), and backspace bytes erase
+the last character. That's it — no cursor positioning, no 2D grid, no color.
+It makes ordinary shell usage (bash/zsh prompts, line editing, simple
+command output) read correctly. Full-screen programs that repaint a grid
+(`vim`, `htop`, `less` without `-F`) will render as garbage. A real terminal
+emulator (what herdr vendors `libghostty-vt` for) is a much bigger project
+and explicitly out of scope here.
+
 ## project layout
 
 ```
 src/
   main.rs     — entry point; dispatches to the TUI or a CLI subcommand
-  ui.rs       — TUI rendering: sidebar, tab bar, panes, status bar, onboarding modal
-  data.rs     — hardcoded mock data for the TUI (workspaces, tabs, panes, agent states)
+  ui.rs       — TUI: AppState (polls the server), rendering (pane list, detail,
+                live pane view, spawn-pane modal, onboarding, status bar)
+  pty_text.rs — turns raw PTY bytes into scrollback lines (see "rendering limits"),
+                plus keycode → raw-byte mapping for forwarding keystrokes
   palette.rs  — catppuccin color values used across the TUI
-  protocol.rs — Request/Response types shared by the CLI client and server (serde/JSON)
+  protocol.rs — Request/Response types shared by the CLI client, TUI, and server
+                (serde/JSON)
   server.rs   — the pane manager: owns real PTYs (portable-pty), one thread per pane
                 for reading output + waiting on exit; listens on a Unix socket
   client.rs   — connects to the server socket, auto-spawning it (detached, via
-                setsid) if it isn't already running
+                setsid) if it isn't already running; used by both the CLI and the TUI
   cli.rs      — argument parsing + printing for spawn/list/send/read/kill
 skills/sieg/SKILL.md          — Claude Code skill teaching the pane manager CLI
 .github/workflows/release.yml — builds + publishes macOS binaries on tag push
 install.sh    — curl-installable script, fetches latest GitHub release binary
 ```
+
+### TUI ↔ server wiring
+
+- `ui::AppState::refresh()` runs every draw tick (~150ms, or immediately
+  after a keypress) — one `Request::List` (sorted by name for stable
+  ordering; the server's registry is a `HashMap`, whose iteration order is
+  not guaranteed) and, if a pane is selected, one `Request::Read` with
+  `lines: None` (the full ~200KB buffer, re-parsed client-side every tick —
+  cheap for a local socket, avoids the server's naive newline-count `lines`
+  filter cutting mid-redraw).
+- Selection is tracked by **pane name**, not index — the registry never
+  shrinks (see "no cleanup command" below), but relying on index stability
+  into a freshly-fetched, freshly-sorted `Vec` on every tick is fragile;
+  name-based lookup isn't.
+- Two input modes: **Nav** (arrow keys move selection, letters are
+  commands) and **Pane** (every keystroke is mapped to raw bytes via
+  `pty_text::key_to_bytes` and sent as-is — no line buffering, no
+  client-side echo; the pane's own PTY echoes typed input back into its
+  output, which the next `Read` picks up, exactly like a real terminal).
+  `ctrl+b` in Pane mode detaches back to Nav — chosen to match the
+  onboarding copy's existing `ctrl+b` prefix-key mention, and to leave
+  plain `Esc` forwardable to real programs (vim, etc.) instead of stealing
+  it as a detach key.
 
 ### pane manager design notes
 
@@ -169,14 +207,23 @@ filenames.)
 5. Fixed the release workflow to stop using a `macos-13` runner for the
    x86_64 build (chronic queue delays) in favor of cross-compiling both
    targets on `macos-14`.
+6. Wired the TUI to the real pane manager (`v0.3.0`): `src/data.rs` deleted,
+   `AppState` now polls the real server, added `src/pty_text.rs` for
+   scrollback rendering + keystroke forwarding, added Nav/Pane focus modes
+   and a spawn-pane form. Prompted by trying to type into a mock pane and
+   having nothing happen — the mockup looked like a real terminal but
+   wasn't one.
 
 ## next steps (not done yet)
 
-- Wire the TUI to the real pane manager (show actual `sieg list` state
-  instead of `src/data.rs`'s hardcoded panes).
+- A real terminal emulator (cursor grid, color) instead of the linear
+  scrollback interpreter in `pty_text.rs` — needed for full-screen programs
+  to render correctly. Large scope; see "rendering limits" above.
 - Real agent state detection (idle/working/blocked) — herdr's version of
   this is a whole manifest-based detection engine; sieg has nothing like it,
   `sieg list` only reports process running/exited.
 - A `sieg remove` command to clear exited panes from the registry.
+- Multiple panes per screen (split view) — the TUI currently shows one
+  focused pane at a time, no tab/workspace grouping.
 - Optional: an in-binary update check / `sieg update` command, since
   installs are currently fully manual (see "shipping an update" above).

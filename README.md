@@ -1,17 +1,18 @@
 # sieg
 
-**Sieg** has two parts today:
+**Sieg** is a small real terminal multiplexer:
 
-- A **visual-only TUI mockup** (`sieg`, no args) — layout and color
-  exploration with hardcoded sample data. Built with `ratatui` + `crossterm`,
-  using catppuccin palette values (originally copied from
-  [herdr](https://herdr.dev)'s `Palette::catppuccin()`, the project this
-  mockup's layout was inspired by).
-- A **real background pane manager** (`sieg spawn`/`list`/`send`/`read`/
-  `kill`) — a small local server that owns real PTY-backed processes, plus a
-  CLI to control them. This part is real, not mocked.
+- `sieg` (no args) opens a TUI that shows **real background panes** — spawn
+  one, focus it, and you're typing directly into its actual stdin. There is
+  no mock data left; the TUI is a client of the same server the CLI talks to.
+- `sieg spawn`/`list`/`send`/`read`/`kill` — the CLI side of the same pane
+  manager, for scripting or driving it from Claude Code.
 
-These two don't talk to each other yet — the TUI still only shows fake data.
+Rendering is intentionally simple: no cursor grid, no color passthrough from
+the child process — CSI/OSC escape sequences are stripped and `\r`/backspace
+are interpreted so ordinary shell usage reads correctly in a linear
+scrollback. Full-screen programs (`vim`, `htop`, ...) will look wrong; a real
+terminal emulator is future work, not done.
 
 ## install
 
@@ -24,16 +25,17 @@ macOS only (arm64 and x86_64).
 ## run from source
 
 ```bash
-cargo run              # visual TUI mockup
-cargo run -- list      # pane manager CLI
+cargo run              # the TUI
+cargo run -- list      # the pane manager CLI
 ```
 
-## TUI controls
+## TUI
 
-- `↑`/`↓` or `j`/`k`: switch workspace
-- `←`/`→` or `h`/`l`: switch tab
-- `o`: toggle the onboarding screen
-- `q` / `Esc`: close onboarding, or quit
+- **Nav mode** (default): `↑`/`↓` or `j`/`k` select a pane · `Enter` focuses
+  the selected pane · `n` spawns a new one · `x` kills the selected one ·
+  `o` toggles onboarding · `q` quits.
+- **Pane focus mode**: keystrokes go straight to the pane's stdin, like a
+  real terminal. `ctrl+b` detaches back to nav mode.
 
 ## pane manager CLI
 
@@ -45,9 +47,10 @@ sieg read <name> [lines]            # read a pane's buffered output
 sieg kill <name>                    # terminate a pane
 ```
 
-The first `sieg spawn` auto-starts a detached local server
-(`~/.sieg/sieg.sock`) that owns the panes; they keep running independently of
-whatever shell created them.
+The first `sieg spawn` (from either the CLI or the TUI) auto-starts a
+detached local server (`~/.sieg/sieg.sock`) that owns the panes; they keep
+running independently of whatever shell or TUI session created them, and the
+TUI and CLI both see the exact same pane state.
 
 ## Claude Code skill
 
@@ -62,5 +65,5 @@ See [`skills/sieg/SKILL.md`](skills/sieg/SKILL.md) for what it covers.
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for project history and the release
 process, or open [`docs/project-map.html`](docs/project-map.html) in a
-browser for a visual walkthrough of what's mock vs. real, the pane manager's
-architecture, the CLI, and the roadmap.
+browser for a visual walkthrough of the architecture, the CLI, and the
+roadmap.
