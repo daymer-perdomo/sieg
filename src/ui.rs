@@ -31,6 +31,14 @@ pub struct SpawnForm {
     pub command: String,
 }
 
+/// The shell a real terminal would launch for the user — used to prefill
+/// the spawn form's command field so a fresh pane behaves like Terminal.app
+/// (cwd-aware prompt, no "default shell is now zsh" nag) instead of the
+/// bare, unconfigured `bash` a blank field would otherwise invite.
+pub fn default_shell() -> String {
+    std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
+}
+
 pub struct AppState {
     pub palette: Palette,
     pub show_onboarding: bool,

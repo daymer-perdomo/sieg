@@ -15,7 +15,7 @@ use crossterm::{execute, ExecutableCommand};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
-use ui::{AppState, Focus, SpawnField, SpawnForm};
+use ui::{default_shell, AppState, Focus, SpawnField, SpawnForm};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -123,7 +123,7 @@ fn handle_key(app: &mut AppState, key: KeyEvent) -> bool {
                 app.spawn_form = Some(SpawnForm {
                     field: SpawnField::Name,
                     name: String::new(),
-                    command: String::new(),
+                    command: default_shell(),
                 });
             }
             KeyCode::Char('x') => app.kill_selected(),

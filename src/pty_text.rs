@@ -42,6 +42,13 @@ pub fn render_pty_lines(raw: &[u8]) -> Vec<String> {
                     None => {}
                 }
             }
+            // A PTY ends every ordinary line with "\r\n" (CR then LF), not
+            // just "\n" — that CR must NOT erase the line it's terminating.
+            // Only a bare `\r` (no following `\n`) is a real redraw, e.g. a
+            // progress bar overwriting itself in place.
+            b'\r' if raw.get(i + 1) == Some(&b'\n') => {
+                i += 1;
+            }
             b'\r' => {
                 current(&mut lines).clear();
                 i += 1;
@@ -52,6 +59,15 @@ pub fn render_pty_lines(raw: &[u8]) -> Vec<String> {
             }
             0x7f | 0x08 => {
                 current(&mut lines).pop();
+                i += 1;
+            }
+            // Expand to the next 8-column tab stop, like a real terminal —
+            // otherwise `ls`'s tab-separated columns render mashed together
+            // (ratatui doesn't interpret raw \t itself).
+            b'\t' => {
+                let line = current(&mut lines);
+                let spaces = 8 - (line.len() % 8);
+                line.extend(std::iter::repeat(b' ').take(spaces));
                 i += 1;
             }
             b => {
@@ -114,6 +130,23 @@ mod tests {
     fn carriage_return_clears_current_line() {
         // a shell redrawing "progress: 1%" then "progress: 99%" on one line
         assert_eq!(render_pty_lines(b"progress: 1%\rprogress: 99%"), vec!["progress: 99%"]);
+    }
+
+    #[test]
+    fn crlf_line_ending_keeps_the_line() {
+        // a real PTY terminates ordinary lines with "\r\n", not just "\n" —
+        // that \r must not erase the line it's ending
+        assert_eq!(
+            render_pty_lines(b"bash-3.2$ ls\r\nfile.txt\r\nbash-3.2$ "),
+            vec!["bash-3.2$ ls", "file.txt", "bash-3.2$ "]
+        );
+    }
+
+    #[test]
+    fn tabs_expand_to_the_next_stop() {
+        // `ls` separates columns with raw tabs; ratatui won't expand them on
+        // its own, so columns would render mashed together otherwise
+        assert_eq!(render_pty_lines(b"a\tbb\tccc\td"), vec!["a       bb      ccc     d"]);
     }
 
     #[test]
